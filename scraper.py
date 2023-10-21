@@ -153,7 +153,6 @@ print(f"Parsed all {numListItems} memory verse entries")
 
 os.chdir(os.path.dirname(__file__) + "/resources/library-logs")
 fileName = f"{str(timestamp()).replace('.', ':').replace(':', '_')}.json"
-print(fileName)
 with open(fileName, 'w+') as f:
     f.write(json.dumps(entryDict, indent=4))
 

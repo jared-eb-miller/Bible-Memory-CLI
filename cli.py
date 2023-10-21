@@ -25,14 +25,12 @@ def viewStats():
 def reviewVerses():
     print("starting review")
 
-def _exit():
-    print("exit")
-
-choices = [resync, viewStats, reviewVerses, _exit]
+choices = [resync, viewStats, reviewVerses, exit]
 switcher = {}
 for i, choice in enumerate(choices, 1):
     switcher.update({
         i: choice
     })
 
-switcher[userChoice()]()
+while True:
+    switcher[userChoice()]()
