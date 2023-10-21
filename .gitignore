@@ -1,2 +1,4 @@
 resources/credentials.json
 resources/response.html
+resources/library-logs/*
+__pycache__

@@ -98,7 +98,7 @@ payload1["email"] = credentials["email"]
 payload1["password"] = credentials["password"]
 
 with requests.Session() as s:
-    print("POST request #1 (login) to https://biblememory.com/login.aspx")
+    print("\nPOST request #1 (login) to https://biblememory.com/login.aspx")
     resp = s.post('https://biblememory.com/login.aspx', data=payload1).text
 
     auth = json.loads(resp)['auth']
@@ -115,10 +115,6 @@ with requests.Session() as s:
     masterHTML = s.get('https://biblememory.com/collection/master/').text
 
 html = BeautifulSoup(masterHTML, 'html.parser')
-
-with open('response.html', 'w') as f:
-    pretty_soup = html.encode('ascii').decode('ascii')
-    f.write(pretty_soup)
 
 listItems = html.find_all('div', {'class': "MemoryVerseListItem"})
 
@@ -156,7 +152,9 @@ for parent in listItems:
 print(f"Parsed all {numListItems} memory verse entries")
 
 os.chdir(os.path.dirname(__file__) + "/resources/library-logs")
-with open("master.json", 'w+') as f:
+fileName = f"{str(timestamp()).replace('.', ':').replace(':', '_')}.json"
+print(fileName)
+with open(fileName, 'w+') as f:
     f.write(json.dumps(entryDict, indent=4))
 
 print() # beautify the CLI
