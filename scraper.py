@@ -85,6 +85,12 @@ class MemoryVerseEntry:
     def __str__(self):
         return f'MemoryVerseEntry object (\n\tAddress: {str(self.address)}\n\tContent: "{self.content}"\n)'
 
+def get_credentials(user):
+    email = credentials["users"][user]["email"]
+    password = credentials["users"][user]["password"]
+
+    return email, password
+
 with open("payloads.json") as f:
     payloads = json.loads(f.read())
 
@@ -94,8 +100,39 @@ payload2 = payloads['payload2']
 with open('credentials.json') as f:
     credentials = json.loads(f.read())
 
-payload1["email"] = credentials["email"]
-payload1["password"] = credentials["password"]
+users = list(credentials['users'].keys())
+user = "DEFAULT"
+email = "DEFAULT"
+password = "DEFAULT"
+
+if len(users) == 1:
+    user = users[0]
+    ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
+    while True:
+        if ans == "Y":
+            email, password = get_credentials(user)
+            break
+        elif ans == "N":
+            break # TODO implement using a different set of credentials
+        else:
+            ans = input("ERROR. Please enter a valid input: ").upper()
+elif len(users) > 1:
+    # TODO implement an option to use a new set of credentials
+    print("Please select a user.\n")
+
+    for i, user in enumerate(users):
+        print(f"{i+1}) {user}")
+
+    while True:
+        try:
+            ans = int(input("Please enter the number of the user: ", end=''))
+            email, password = get_credentials(users[ans])
+            break
+        except (ValueError, IndexError):
+            print("ERROR.", end=' ')
+else:
+    pass # TODO implement the case for 0 saved users or error case
+
 
 with requests.Session() as s:
     print("\nPOST request #1 (login) to https://biblememory.com/login.aspx")
@@ -115,6 +152,9 @@ with requests.Session() as s:
     masterHTML = s.get('https://biblememory.com/collection/master/').text
 
 html = BeautifulSoup(masterHTML, 'html.parser')
+
+with open("response.html", 'w') as f:
+    f.write(html.text)
 
 listItems = html.find_all('div', {'class': "MemoryVerseListItem"})
 
