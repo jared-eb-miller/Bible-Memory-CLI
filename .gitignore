@@ -1,4 +1,6 @@
 resources/credentials.json
+resources/payloads.json
 resources/response.html
 resources/library-logs/*
 __pycache__
+old_scraper.py
