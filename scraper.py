@@ -1,10 +1,11 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from bs4 import BeautifulSoup
 from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
 import time
 import json
 import os
@@ -139,71 +140,81 @@ def format_output(myVerses: Collection) -> str:
     
     return output
 
-def get_credentials(user: str):
-    email = credentials["users"][user]["email"]
-    password = credentials["users"][user]["password"]
+def get_credentials(user: str, cred_dict: dict):
+    email = cred_dict["users"][user]["email"]
+    password = cred_dict["users"][user]["password"]
 
     return email, password
 
+def main():
+    with open('credentials.json') as f:
+        credentials = json.loads(f.read())
 
-with open('credentials.json') as f:
-    credentials = json.loads(f.read())
+    users = list(credentials['users'].keys())
+    user = "DEFAULT"
+    email = "DEFAULT"
+    password = "DEFAULT"
 
-users = list(credentials['users'].keys())
-user = "DEFAULT"
-email = "DEFAULT"
-password = "DEFAULT"
+    if len(users) == 1:
+        user = users[0]
+        #ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
+        ans = "Y"
+        while True:
+            if ans == "Y":
+                email, password = get_credentials(user, credentials)
+                break
+            elif ans == "N":
+                break # TODO implement using a different set of credentials
+            else:
+                ans = input("ERROR. Please enter a valid input: ").upper()
+    elif len(users) > 1:
+        # TODO implement an option to use a new set of credentials
+        print("Please select a user.\n")
 
-if len(users) == 1:
-    user = users[0]
-    #ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
-    ans = "Y"
-    while True:
-        if ans == "Y":
-            email, password = get_credentials(user)
-            break
-        elif ans == "N":
-            break # TODO implement using a different set of credentials
-        else:
-            ans = input("ERROR. Please enter a valid input: ").upper()
-elif len(users) > 1:
-    # TODO implement an option to use a new set of credentials
-    print("Please select a user.\n")
+        for i, user in enumerate(users):
+            print(f"{i+1}) {user}")
 
-    for i, user in enumerate(users):
-        print(f"{i+1}) {user}")
+        while True:
+            try:
+                ans = int(input("Please enter the number of the user: ", end=''))
+                email, password = get_credentials(users[ans], credentials)
+                break
+            except (ValueError, IndexError):
+                print("ERROR.", end=' ')
+    else:
+        pass # TODO implement the case for 0 saved users or error case
 
-    while True:
-        try:
-            ans = int(input("Please enter the number of the user: ", end=''))
-            email, password = get_credentials(users[ans])
-            break
-        except (ValueError, IndexError):
-            print("ERROR.", end=' ')
-else:
-    pass # TODO implement the case for 0 saved users or error case
-
-# login
-print("Starting webdriver...")
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-print("\nGET request to https://biblememory.com/login")
-driver.get("https://biblememory.com/login")
-print("\tAdding credentials...")
-driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
-driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
-driver.find_element(By.CLASS_NAME, "btnLogin").click()
-print("\tLogin sucessful!\n")
-
-
-myVerses = Collection('My Verses')
-parse_page(driver, myVerses)
-
-with open("outFile.txt", "w") as outFile:
-    outFile.write(format_output(myVerses))
+    # login
+    print("Starting webdriver...")
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+    options.add_argument("--window-size=1000,1200")
+    driver = webdriver.Chrome(
+        options=options,
+        service=Service(ChromeDriverManager().install())
+        )
+    print("\nGET request to https://biblememory.com/login")
+    driver.get("https://biblememory.com/login")
+    print("\tAdding credentials...")
+    driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
+    driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
+    driver.find_element(By.CLASS_NAME, "btnLogin").click()
+    print("\tLogin sucessful!\n")
 
 
-print("\nSuccessfully parsed your entire library!")
-print("Waiting...")
-time.sleep(5)
+    myVerses = Collection('My Verses')
+    parse_page(driver, myVerses)
 
-driver.quit()
+    with open("outFile.txt", "w") as outFile:
+        outFile.write(format_output(myVerses))
+
+
+    print("\nSuccessfully parsed your entire library!\n")
+    print("Waiting...")
+    time.sleep(5)
+
+    driver.quit()
+
+if __name__ == "__main__":
+    main()
