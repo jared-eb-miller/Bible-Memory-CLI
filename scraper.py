@@ -15,59 +15,6 @@ import resources
 
 os.chdir(os.path.dirname(__file__) + "/resources")
 
-def get_credentials(user: str):
-    email = credentials["users"][user]["email"]
-    password = credentials["users"][user]["password"]
-
-    return email, password
-
-with open('credentials.json') as f:
-    credentials = json.loads(f.read())
-
-users = list(credentials['users'].keys())
-user = "DEFAULT"
-email = "DEFAULT"
-password = "DEFAULT"
-
-if len(users) == 1:
-    user = users[0]
-    #ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
-    ans = "Y"
-    while True:
-        if ans == "Y":
-            email, password = get_credentials(user)
-            break
-        elif ans == "N":
-            break # TODO implement using a different set of credentials
-        else:
-            ans = input("ERROR. Please enter a valid input: ").upper()
-elif len(users) > 1:
-    # TODO implement an option to use a new set of credentials
-    print("Please select a user.\n")
-
-    for i, user in enumerate(users):
-        print(f"{i+1}) {user}")
-
-    while True:
-        try:
-            ans = int(input("Please enter the number of the user: ", end=''))
-            email, password = get_credentials(users[ans])
-            break
-        except (ValueError, IndexError):
-            print("ERROR.", end=' ')
-else:
-    pass # TODO implement the case for 0 saved users or error case
-
-# login
-print("Starting webdriver...")
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-print("GET request to https://biblememory.com/login")
-driver.get("https://biblememory.com/login")
-print("\tAdding credentials...")
-driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
-driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
-driver.find_element(By.CLASS_NAME, "btnLogin").click()
-print("\tLogin sucessful!")
 
 class Collection:
     def __init__(self, name: str, parent=None):
@@ -104,8 +51,6 @@ class Collection:
             ancestors.append(generation)
         
         return '/'.join([e.name for e in ancestors[::-1]])
-
-        
 
 def parse_verses(dom: BeautifulSoup) -> list[resources.MemoryVerseEntry]:
     listItems = dom.find_all('div', {'class': "MemoryVerseListItem"})
@@ -174,21 +119,85 @@ def parse_page(driver: webdriver.Chrome,  into_collection: Collection):
         driver.get(f"https://biblememory.com/collection/{subcollection.url_name}/")
         parse_page(driver, subcollection)
 
+def format_output(myVerses: Collection) -> str:
+    output = "My Verses\n"
+
+    for collection in myVerses.subcollections:
+        output += "|- " + collection.name + ":\n"
+        
+        for verse in collection.verses:
+            output += "|   |- " + str(verse.address) + "\n"
+
+        for subcollection in collection.subcollections:
+            output += "|   |- " + subcollection.name + ":\n"
+
+            for verse in subcollection.verses:
+                output += "|   |   |- " + str(verse.address) + "\n"
     
+    return output
+
+def get_credentials(user: str):
+    email = credentials["users"][user]["email"]
+    password = credentials["users"][user]["password"]
+
+    return email, password
+
+
+with open('credentials.json') as f:
+    credentials = json.loads(f.read())
+
+users = list(credentials['users'].keys())
+user = "DEFAULT"
+email = "DEFAULT"
+password = "DEFAULT"
+
+if len(users) == 1:
+    user = users[0]
+    #ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
+    ans = "Y"
+    while True:
+        if ans == "Y":
+            email, password = get_credentials(user)
+            break
+        elif ans == "N":
+            break # TODO implement using a different set of credentials
+        else:
+            ans = input("ERROR. Please enter a valid input: ").upper()
+elif len(users) > 1:
+    # TODO implement an option to use a new set of credentials
+    print("Please select a user.\n")
+
+    for i, user in enumerate(users):
+        print(f"{i+1}) {user}")
+
+    while True:
+        try:
+            ans = int(input("Please enter the number of the user: ", end=''))
+            email, password = get_credentials(users[ans])
+            break
+        except (ValueError, IndexError):
+            print("ERROR.", end=' ')
+else:
+    pass # TODO implement the case for 0 saved users or error case
+
+# login
+print("Starting webdriver...")
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+print("\nGET request to https://biblememory.com/login")
+driver.get("https://biblememory.com/login")
+print("\tAdding credentials...")
+driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
+driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
+driver.find_element(By.CLASS_NAME, "btnLogin").click()
+print("\tLogin sucessful!\n")
+
 
 myVerses = Collection('My Verses')
 parse_page(driver, myVerses)
 
-print("My Verses")
-for collection in myVerses.subcollections[:-1]:
-    print("|- " + collection.name + ":")
-    for verse in collection.verses:
-        print("|   |- " + str(verse.address))
-    for subcollection in collection.subcollections:
-        print("|   |- " + subcollection.name + ":")
-        for verse in subcollection.verses:
-            print("|   |   |- " + str(verse.address))
 
+with open("outFile.txt", "w") as outFile:
+    outFile.write(format_output(myVerses))
 
 print("Waiting...")
 time.sleep(5)
