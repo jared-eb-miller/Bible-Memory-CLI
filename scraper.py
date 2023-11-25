@@ -1,101 +1,25 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
-import requests
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 import json
 import os
 from datetime import datetime
 timestamp = datetime.now
 
+import resources
+
 os.chdir(os.path.dirname(__file__) + "/resources")
 
-
-class MemoryVerseEntry:
-    class Address:
-        def __init__(
-                self, 
-                book: int, 
-                chapter: int, 
-                verse_start: int, 
-                verse_end=None
-                ):
-            self.book = book
-            self.chapter = chapter
-            if verse_end and (verse_end != verse_start):
-                self.verse_start = verse_start
-                self.verse_end = verse_end
-                self.verses = tuple(range(verse_start, verse_end + 1))
-                self.isSingleVerse = False
-            else:
-                self.verses = tuple([verse_start])
-                self.verse = verse_start
-                self.isSingleVerse = True            
-        
-        def __str__(self):
-            if hasattr(self, 'isSingleVerse'):
-                if not self.isSingleVerse:
-                    return f"{self.book} {self.chapter}:{self.verse_start}-{self.verse_end}"
-            return f"{self.book} {self.chapter}:{self.verse}"
-
-    class SingleVerse(Address):
-        def __init__(self, book: int, chapter: int, verse: int):
-            super().__init__(book, chapter, verse)
-            del self.isSingleVerse
-
-        def __eq__(self, __value: object) -> bool:
-            if isinstance(__value, type(self)): 
-                return (
-                    __value.book == self.book \
-                    and __value.chapter == self.chapter \
-                    and __value.verse == self.verse
-                )
-
-    def __init__(self, address: str, content: str, isMemorized: bool):
-        self.address = self._parse_address(address)
-        self.content = content
-        self.isMemorized = isMemorized
-        self.numVerses = 1 if self.address.isSingleVerse else len(self.address.verses)
-        self.versesContained = tuple([
-            MemoryVerseEntry.SingleVerse(
-                self.address.book,
-                self.address.chapter,
-                v
-            ) for v in self.address.verses
-        ])
-
-    def _parse_address(self, address: str) -> Address:
-        # example address 'Psalm 1:1-6'
-        verses_str = address[address.rfind(':') + 1:]
-        if '-' in verses_str:
-            verse_start, verse_end = [int(s) for s in verses_str.split('-')]
-        else:
-            verse_start = int(verses_str)
-            verse_end = None
-
-        chapter_str = address[address.rfind(' ') + 1:address.rfind(':')]
-        chapter = int(chapter_str)
-
-        book_str = address[:address.rfind(' ')]
-
-        return MemoryVerseEntry.Address(
-            book_str,
-            chapter,
-            verse_start,
-            verse_end
-        )
-
-    def __str__(self):
-        return f'MemoryVerseEntry object (\n\tAddress: {str(self.address)}\n\tContent: "{self.content}"\n)'
-
-def get_credentials(user):
+def get_credentials(user: str):
     email = credentials["users"][user]["email"]
     password = credentials["users"][user]["password"]
 
     return email, password
-
-with open("payloads.json") as f:
-    payloads = json.loads(f.read())
-
-payload1 = payloads['payload1']
-payload2 = payloads['payload2']
 
 with open('credentials.json') as f:
     credentials = json.loads(f.read())
@@ -107,7 +31,8 @@ password = "DEFAULT"
 
 if len(users) == 1:
     user = users[0]
-    ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
+    #ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
+    ans = "Y"
     while True:
         if ans == "Y":
             email, password = get_credentials(user)
@@ -134,66 +59,131 @@ else:
     pass # TODO implement the case for 0 saved users or error case
 
 
-with requests.Session() as s:
-    print("\nPOST request #1 (login) to https://biblememory.com/login.aspx")
-    resp = s.post('https://biblememory.com/login.aspx', data=payload1).text
 
-    auth = json.loads(resp)['auth']
-    if auth == 'failed':
-        print("\tERROR. Unable to login\n")
-        quit()
-    else:
-        print("\tLogin successful")
+# login
+print("Starting webdriver...")
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+print("GET request to https://biblememory.com/login")
+driver.get("https://biblememory.com/login")
+print("\tAdding credentials...")
+driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
+driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
+driver.find_element(By.CLASS_NAME, "btnLogin").click()
+print("\tLogin sucessful!")
+class Collection:
+    def __init__(self, name: str, parent=None):
+        self.name = name
+        self.verses = []
+        self.subcollections = []
+        self.url_name = ''
+        self.parent = parent
 
-    print("POST request #2 (payload) to https://biblememory.com/login.aspx")
-    s.post('https://biblememory.com/login.aspx', data=payload2)
+    def add_subcollection(self, collection) -> None:
+        self.subcollections.append(collection)
+        collection.set_parent(self)
 
-    print("GET request to https://biblememory.com/collection/master/")
-    masterHTML = s.get('https://biblememory.com/collection/master/').text
+    def add_subcollections(self, collections: list) -> None:
+        for collection in collections:
+            self.add_subcollection(collection)
 
-html = BeautifulSoup(masterHTML, 'html.parser')
+    def remove_subcollection(self, collection) -> None:
+        self.subcollections.remove(collection)
 
-with open("response.html", 'w') as f:
-    f.write(html.text)
+    def set_parent(self, parent) -> None:
+        if self.parent is not None:
+            if self.parent == parent:
+                return
+            self.parent.remove_subcollection(self)
+        
+        self.parent = parent
+        parent.add_subcollection(self)
 
-listItems = html.find_all('div', {'class': "MemoryVerseListItem"})
+    def ancestry(self) -> str:
+        ancestors = [self]
+        generation = self
+        while generation.parent is not None:
+            generation = generation.parent
+            ancestors.append(generation)
+        
+        return ' -> '.join([e.name for e in ancestors[::-1]])
 
-numListItems = len(listItems)
-print(f"Collected {numListItems} memory verse entries")
+        
 
-memorizedList = []
-notMemorizedList = []
-entryDict = {
-    "memorized": {},
-    "notMemorized": {}
-}
+def parse_verses(dom: BeautifulSoup) -> list[resources.MemoryVerseEntry]:
+    listItems = dom.find_all('div', {'class': "MemoryVerseListItem"})
 
-for parent in listItems:
-    # navagate HTML tree
-    verseInfoItem = parent.contents[7]
-    address = verseInfoItem.contents[1].text[2:].strip()
-    content = verseInfoItem.contents[3].text.strip()
+    # numListItems = len(listItems)
+    # print(f"Collected {numListItems} memory verse entries")
 
-    statusInfoItem = parent.contents[-2]
+    verseList = []
 
-    if statusInfoItem.text.strip() == "Not Yet Memorized":
-        entryDict['notMemorized'].update({
-            address: content
-        })
-        entry = MemoryVerseEntry(address, content, isMemorized=False)
-        notMemorizedList.append(entry)
-    else:
-        entryDict['memorized'].update({
-            address: content
-        })
-        entry = MemoryVerseEntry(address, content, isMemorized=True)
-        memorizedList.append(entry)
+    for parent in listItems:
+        # navagate HTML tree
+        verseInfoItem = parent.contents[7]
+        address = verseInfoItem.contents[1].text[2:].strip()
+        content = verseInfoItem.contents[3].text.strip()
 
-print(f"Parsed all {numListItems} memory verse entries")
+        statusInfoItem = parent.contents[-2]
 
-os.chdir(os.path.dirname(__file__) + "/resources/library-logs")
-fileName = f"{str(timestamp()).replace('.', ':').replace(':', '_')}.json"
-with open(fileName, 'w+') as f:
-    f.write(json.dumps(entryDict, indent=4))
+        stateOfMemory = statusInfoItem.text.strip() != "Not Yet Memorized"
+        entry = resources.MemoryVerseEntry(address, content, isMemorized=stateOfMemory)
 
-print() # beautify the CLI
+        verseList.append(entry)
+    
+    return verseList
+
+def parse_subcollections(dom: BeautifulSoup) -> list[Collection]:
+    listItems = dom.find_all('div', {'class': "CategoryListItem"})
+
+    collectionList = []
+    collectionNameList = []
+
+    for elem in listItems:
+        # navagate HTML tree
+        human_name = elem.contents[3].text.strip().split('\xa0')[0]
+        if human_name in collectionNameList:
+            continue
+        url_name = elem['name']
+
+        col = Collection(human_name)
+        col.url_name = url_name
+        collectionList.append(col)
+        collectionNameList.append(human_name)
+    
+    return collectionList
+
+def parse_page(driver: webdriver.Chrome,  into_collection: Collection):
+    # wait for content to load
+    WebDriverWait(driver, 3).until(
+        EC.presence_of_element_located((By.ID, "ctl00_MainContent_pnlMyVerses")) 
+    )
+
+    # parse page
+    dom = BeautifulSoup(driver.page_source, 'html.parser')
+    into_collection.verses = parse_verses(dom)
+    into_collection.add_subcollections(parse_subcollections(dom))
+
+
+    # explore subcollections
+    for subcollection in into_collection.subcollections:
+        driver.get(f"https://biblememory.com/collection/{subcollection.url_name}/")
+        parse_page(driver, subcollection)
+    
+    print(f"Parsed {into_collection.ancestry()} sucessfully.")
+
+myVerses = Collection('My Verses')
+parse_page(driver, myVerses)
+
+print("My Verses")
+for collection in myVerses.subcollections[:-1]:
+    print("\t" + collection.name + ":")
+    for verse in collection.verses:
+        print("\t\t" + str(verse.address))
+    for subcollection in collection.subcollections:
+        print("\t\t" + subcollection.name + ":")
+        for verse in subcollection.verses:
+            print("\t\t\t" + str(verse.address))
+
+
+# print("Waiting...")
+# time.sleep(30)
