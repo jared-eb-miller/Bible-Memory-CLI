@@ -58,8 +58,6 @@ elif len(users) > 1:
 else:
     pass # TODO implement the case for 0 saved users or error case
 
-
-
 # login
 print("Starting webdriver...")
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
@@ -70,6 +68,7 @@ driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
 driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
 driver.find_element(By.CLASS_NAME, "btnLogin").click()
 print("\tLogin sucessful!")
+
 class Collection:
     def __init__(self, name: str, parent=None):
         self.name = name
@@ -104,7 +103,7 @@ class Collection:
             generation = generation.parent
             ancestors.append(generation)
         
-        return ' -> '.join([e.name for e in ancestors[::-1]])
+        return '/'.join([e.name for e in ancestors[::-1]])
 
         
 
@@ -112,7 +111,8 @@ def parse_verses(dom: BeautifulSoup) -> list[resources.MemoryVerseEntry]:
     listItems = dom.find_all('div', {'class': "MemoryVerseListItem"})
 
     numListItems = len(listItems)
-    print(f"Collected {numListItems} memory verse entries")
+    if numListItems > 0:
+        print(f"  Collected {numListItems} memory verse entries")
 
     verseList = []
 
@@ -135,7 +135,8 @@ def parse_subcollections(dom: BeautifulSoup) -> list[Collection]:
     listItems = dom.find_all('div', {'class': "CategoryListItem"})
 
     numListItems = len(listItems)
-    print(f"Collected {numListItems} subcollections")
+    if numListItems > 0:
+        print(f"  Collected {numListItems} subcollections")
 
     collectionList = []
     collectionNameList = []
@@ -161,6 +162,8 @@ def parse_page(driver: webdriver.Chrome,  into_collection: Collection):
     )
 
     # parse page
+    print(f"Parsing {into_collection.ancestry()}...")
+
     dom = BeautifulSoup(driver.page_source, 'html.parser')
     into_collection.verses = parse_verses(dom)
     into_collection.add_subcollections(parse_subcollections(dom))
@@ -170,22 +173,22 @@ def parse_page(driver: webdriver.Chrome,  into_collection: Collection):
     for subcollection in into_collection.subcollections:
         driver.get(f"https://biblememory.com/collection/{subcollection.url_name}/")
         parse_page(driver, subcollection)
+
     
-    print(f"Parsed {into_collection.ancestry()} sucessfully.")
 
 myVerses = Collection('My Verses')
 parse_page(driver, myVerses)
 
 print("My Verses")
 for collection in myVerses.subcollections[:-1]:
-    print("\t" + collection.name + ":")
+    print("|- " + collection.name + ":")
     for verse in collection.verses:
-        print("\t\t" + str(verse.address))
+        print("|   |- " + str(verse.address))
     for subcollection in collection.subcollections:
-        print("\t\t" + subcollection.name + ":")
+        print("|   |- " + subcollection.name + ":")
         for verse in subcollection.verses:
-            print("\t\t\t" + str(verse.address))
+            print("|   |   |- " + str(verse.address))
 
 
-# print("Waiting...")
-# time.sleep(30)
+print("Waiting...")
+time.sleep(5)
