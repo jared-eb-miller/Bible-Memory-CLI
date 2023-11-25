@@ -11,8 +11,10 @@ import json
 import os
 from datetime import datetime
 timestamp = datetime.now
-
 import resources
+
+INDENT_WIDTH = 2
+INDENT_STRING = ''.join([' ']*INDENT_WIDTH)
 
 os.chdir(os.path.dirname(__file__) + "/resources")
 
@@ -58,7 +60,7 @@ def parse_verses(dom: BeautifulSoup, depth: int=0) -> list[resources.MemoryVerse
 
     numListItems = len(listItems)
     if numListItems > 0:
-        indent = ''.join(['  ']*depth)
+        indent = ''.join([INDENT_STRING]*depth)
         print(f"{indent}Collected {numListItems} memory verse entries")
 
     verseList = []
@@ -83,7 +85,7 @@ def parse_subcollections(dom: BeautifulSoup, depth: int=0) -> list[Collection]:
 
     numListItems = len(listItems)
     if numListItems > 0:
-        indent = ''.join(['  ']*depth)
+        indent = ''.join([INDENT_STRING]*depth)
         print(f"{indent}Collected {numListItems} subcollections")
 
     collectionList = []
@@ -147,6 +149,16 @@ def get_credentials(user: str, cred_dict: dict):
     return email, password
 
 def main():
+    print("Starting selenium webdriver instance...")
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+    options.add_argument("--window-size=1000,1200")
+    driver = webdriver.Chrome(
+        options=options,
+        service=Service(ChromeDriverManager().install())
+        )
+    
     with open('credentials.json') as f:
         credentials = json.loads(f.read())
 
@@ -157,8 +169,7 @@ def main():
 
     if len(users) == 1:
         user = users[0]
-        #ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
-        ans = "Y"
+        ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
         while True:
             if ans == "Y":
                 email, password = get_credentials(user, credentials)
@@ -185,22 +196,13 @@ def main():
         pass # TODO implement the case for 0 saved users or error case
 
     # login
-    print("Starting webdriver...")
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    options.add_argument("--window-size=1000,1200")
-    driver = webdriver.Chrome(
-        options=options,
-        service=Service(ChromeDriverManager().install())
-        )
     print("\nGET request to https://biblememory.com/login")
     driver.get("https://biblememory.com/login")
-    print("\tAdding credentials...")
+    print(f"{INDENT_STRING}Adding credentials...")
     driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
     driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
     driver.find_element(By.CLASS_NAME, "btnLogin").click()
-    print("\tLogin sucessful!\n")
+    print(f"{INDENT_STRING}Login sucessful!\n")
 
 
     myVerses = Collection('My Verses')
@@ -210,11 +212,10 @@ def main():
         outFile.write(format_output(myVerses))
 
 
-    print("\nSuccessfully parsed your entire library!\n")
-    print("Waiting...")
-    time.sleep(5)
-
+    print("\nSuccessfully parsed your entire library!")
+    print("Shutting down webdriver instance...")
     driver.quit()
+    print("Done.")
 
 if __name__ == "__main__":
     main()

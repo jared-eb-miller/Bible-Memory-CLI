@@ -18,6 +18,8 @@ def userChoice() -> int:
 
 def resync():
     import scraper
+    print("\nRe-synchronizing local library...")
+    scraper.main()
 
 def viewStats():
     print("starting view stats")
@@ -25,6 +27,7 @@ def viewStats():
 def reviewVerses():
     print("starting review")
 
+# build hashmap of function objects
 choices = [resync, viewStats, reviewVerses, exit]
 switcher = {}
 for i, choice in enumerate(choices, 1):
