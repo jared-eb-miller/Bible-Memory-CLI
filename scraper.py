@@ -1,3 +1,4 @@
+from __future__ import annotations
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -6,7 +7,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-import time
 import json
 import os
 from datetime import datetime
@@ -22,23 +22,23 @@ os.chdir(os.path.dirname(__file__) + "/resources")
 class Collection:
     def __init__(self, name: str, parent=None):
         self.name = name
-        self.verses = []
-        self.subcollections = []
+        self.verses: list[resources.MemoryVerseEntry] = []
+        self.subcollections: list[Collection] = []
         self.url_name = ''
         self.parent = parent
 
-    def add_subcollection(self, collection) -> None:
+    def add_subcollection(self, collection: Collection) -> None:
         self.subcollections.append(collection)
         collection.set_parent(self)
 
-    def add_subcollections(self, collections: list) -> None:
+    def add_subcollections(self, collections: list[Collection]) -> None:
         for collection in collections:
             self.add_subcollection(collection)
 
-    def remove_subcollection(self, collection) -> None:
+    def remove_subcollection(self, collection: Collection) -> None:
         self.subcollections.remove(collection)
 
-    def set_parent(self, parent) -> None:
+    def set_parent(self, parent: Collection) -> None:
         if self.parent is not None:
             if self.parent == parent:
                 return
@@ -120,7 +120,7 @@ def parse_page(driver: webdriver.Chrome,  into_collection: Collection, depth: in
     into_collection.add_subcollections(parse_subcollections(dom, depth+1))
 
 
-    # explore subcollections
+    # recursively explore subcollections
     for subcollection in into_collection.subcollections:
         driver.get(f"https://biblememory.com/collection/{subcollection.url_name}/")
         parse_page(driver, subcollection, depth=depth+1)
