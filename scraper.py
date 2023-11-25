@@ -52,12 +52,13 @@ class Collection:
         
         return '/'.join([e.name for e in ancestors[::-1]])
 
-def parse_verses(dom: BeautifulSoup) -> list[resources.MemoryVerseEntry]:
+def parse_verses(dom: BeautifulSoup, depth: int=0) -> list[resources.MemoryVerseEntry]:
     listItems = dom.find_all('div', {'class': "MemoryVerseListItem"})
 
     numListItems = len(listItems)
     if numListItems > 0:
-        print(f"  Collected {numListItems} memory verse entries")
+        indent = ''.join(['  ']*depth)
+        print(f"{indent}Collected {numListItems} memory verse entries")
 
     verseList = []
 
@@ -76,12 +77,13 @@ def parse_verses(dom: BeautifulSoup) -> list[resources.MemoryVerseEntry]:
     
     return verseList
 
-def parse_subcollections(dom: BeautifulSoup) -> list[Collection]:
+def parse_subcollections(dom: BeautifulSoup, depth: int=0) -> list[Collection]:
     listItems = dom.find_all('div', {'class': "CategoryListItem"})
 
     numListItems = len(listItems)
     if numListItems > 0:
-        print(f"  Collected {numListItems} subcollections")
+        indent = ''.join(['  ']*depth)
+        print(f"{indent}Collected {numListItems} subcollections")
 
     collectionList = []
     collectionNameList = []
@@ -100,24 +102,25 @@ def parse_subcollections(dom: BeautifulSoup) -> list[Collection]:
     
     return collectionList
 
-def parse_page(driver: webdriver.Chrome,  into_collection: Collection):
+def parse_page(driver: webdriver.Chrome,  into_collection: Collection, depth: int=0):
     # wait for content to load
     WebDriverWait(driver, 3).until(
         EC.presence_of_element_located((By.ID, "ctl00_MainContent_pnlMyVerses")) 
     )
 
     # parse page
-    print(f"Parsing {into_collection.ancestry()}...")
+    indent = ''.join(['  ']*depth)
+    print(f"{indent}Parsing {into_collection.ancestry()}...")
 
     dom = BeautifulSoup(driver.page_source, 'html.parser')
-    into_collection.verses = parse_verses(dom)
-    into_collection.add_subcollections(parse_subcollections(dom))
+    into_collection.verses = parse_verses(dom, depth+1)
+    into_collection.add_subcollections(parse_subcollections(dom, depth+1))
 
 
     # explore subcollections
     for subcollection in into_collection.subcollections:
         driver.get(f"https://biblememory.com/collection/{subcollection.url_name}/")
-        parse_page(driver, subcollection)
+        parse_page(driver, subcollection, depth=depth+1)
 
 def format_output(myVerses: Collection) -> str:
     output = "My Verses\n"
@@ -195,9 +198,12 @@ print("\tLogin sucessful!\n")
 myVerses = Collection('My Verses')
 parse_page(driver, myVerses)
 
-
 with open("outFile.txt", "w") as outFile:
     outFile.write(format_output(myVerses))
 
+
+print("\nSuccessfully parsed your entire library!")
 print("Waiting...")
 time.sleep(5)
+
+driver.quit()
