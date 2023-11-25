@@ -71,6 +71,14 @@ class MemoryVerseEntry:
             verse_start,
             verse_end
         )
+    
+    def to_dict(self) -> dict:
+        return {
+            str(self.address): {
+                "content": self.content,
+                "stateOfMemory": "memorized" if self.isMemorized else "notMemorized"
+            }
+        }
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'MemoryVerseEntry object (\n\tAddress: {str(self.address)}\n\tContent: "{self.content}"\n)'

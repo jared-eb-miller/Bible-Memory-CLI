@@ -54,7 +54,43 @@ class Collection:
             ancestors.append(generation)
         
         return '/'.join([e.name for e in ancestors[::-1]])
+    
+    def to_dict(self) -> dict:
+        verse_dict = {}
+        for verse in self.verses:
+            verse_dict.update(verse.to_dict())
 
+        collection_dict = {}
+        for collection in self.subcollections:
+            collection_dict.update(collection.to_dict())
+
+        contents = {
+            "verses": verse_dict,
+            "subcolections": collection_dict
+        }
+
+        return {self.name: contents}
+
+    def pretify(self) -> str:
+        output = self.name + ":\n"
+
+        for verse in self.verses:
+            output += "|- " + str(verse.address) + "\n"
+
+        for collection in self.subcollections:
+            output += "|- " + collection.name + ":\n"
+            
+            for verse in collection.verses:
+                output += "|   |- " + str(verse.address) + "\n"
+
+            for subcollection in collection.subcollections:
+                output += "|   |- " + subcollection.name + ":\n"
+
+                for verse in subcollection.verses:
+                    output += "|   |   |- " + str(verse.address) + "\n"
+        
+        return output
+    
 def parse_verses(dom: BeautifulSoup, depth: int=0) -> list[resources.MemoryVerseEntry]:
     listItems = dom.find_all('div', {'class': "MemoryVerseListItem"})
 
@@ -125,22 +161,6 @@ def parse_page(driver: webdriver.Chrome,  into_collection: Collection, depth: in
         driver.get(f"https://biblememory.com/collection/{subcollection.url_name}/")
         parse_page(driver, subcollection, depth=depth+1)
 
-def format_output(myVerses: Collection) -> str:
-    output = "My Verses\n"
-
-    for collection in myVerses.subcollections:
-        output += "|- " + collection.name + ":\n"
-        
-        for verse in collection.verses:
-            output += "|   |- " + str(verse.address) + "\n"
-
-        for subcollection in collection.subcollections:
-            output += "|   |- " + subcollection.name + ":\n"
-
-            for verse in subcollection.verses:
-                output += "|   |   |- " + str(verse.address) + "\n"
-    
-    return output
 
 def get_credentials(user: str, cred_dict: dict):
     email = cred_dict["users"][user]["email"]
@@ -204,18 +224,21 @@ def main():
     driver.find_element(By.CLASS_NAME, "btnLogin").click()
     print(f"{INDENT_STRING}Login sucessful!\n")
 
-
+    
     myVerses = Collection('My Verses')
     parse_page(driver, myVerses)
 
-    with open("outFile.txt", "w") as outFile:
-        outFile.write(format_output(myVerses))
-
+    # serialize to JSON and save in 'library-log'
+    os.chdir(os.path.dirname(__file__) + "/resources/library-logs")
+    fileName = f"{str(timestamp()).replace('.', ':').replace(':', '_')}.json"
+    with open(fileName, 'w+') as f:
+        f.write(json.dumps(myVerses.to_dict(), indent=4))
+    os.chdir(os.path.dirname(__file__) + "/resources/")
 
     print("\nSuccessfully parsed your entire library!")
     print("Shutting down webdriver instance...")
     driver.quit()
-    print("Done.")
+    print()
 
 if __name__ == "__main__":
     main()
