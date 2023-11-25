@@ -96,7 +96,6 @@ class Collection:
             self.parent.remove_subcollection(self)
         
         self.parent = parent
-        parent.add_subcollection(self)
 
     def ancestry(self) -> str:
         ancestors = [self]
@@ -112,8 +111,8 @@ class Collection:
 def parse_verses(dom: BeautifulSoup) -> list[resources.MemoryVerseEntry]:
     listItems = dom.find_all('div', {'class': "MemoryVerseListItem"})
 
-    # numListItems = len(listItems)
-    # print(f"Collected {numListItems} memory verse entries")
+    numListItems = len(listItems)
+    print(f"Collected {numListItems} memory verse entries")
 
     verseList = []
 
@@ -134,6 +133,9 @@ def parse_verses(dom: BeautifulSoup) -> list[resources.MemoryVerseEntry]:
 
 def parse_subcollections(dom: BeautifulSoup) -> list[Collection]:
     listItems = dom.find_all('div', {'class': "CategoryListItem"})
+
+    numListItems = len(listItems)
+    print(f"Collected {numListItems} subcollections")
 
     collectionList = []
     collectionNameList = []
