@@ -1,3 +1,11 @@
+import os
+import platform
+
+if platform.system() == "Windows":
+    clear = lambda: os.system("cls")
+else:
+    clear = lambda: os.system("clear")
+
 def displayMenu():
     print("""
 ******************** Bible Memory CLI ********************
@@ -38,5 +46,7 @@ for i, choice in enumerate(choices, 1):
 while True:
     try:
         switcher[userChoice()]()
+        clear()
     except (KeyError, ValueError):
+        clear()
         print("ERROR.")
