@@ -159,3 +159,24 @@ class Collection:
                     output += "|   |   |- " + str(verse.address) + "\n"
         
         return output
+    
+class CollectionFromDict(Collection):
+    def __init__(self, log_dict: dict, parent=None):
+        name = list(log_dict.keys())[0]
+        super().__init__(name, parent)
+
+        verse_dict = log_dict[name]["verses"]
+        for v_addr in verse_dict.keys():
+            self.verses.append(MemoryVerseEntry(
+                v_addr,
+                verse_dict[v_addr]["content"],
+                True if verse_dict[v_addr]["stateOfMemory"] == "memorized" else False
+                ))
+            
+        subcollection_dict = log_dict[name]["subcolections"]
+        for sc_name in subcollection_dict.keys():
+            self.add_subcollection(
+                CollectionFromDict({
+                    sc_name: subcollection_dict[sc_name]
+                })
+            )

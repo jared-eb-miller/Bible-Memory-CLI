@@ -12,11 +12,9 @@ from datetime import datetime
 timestamp = datetime.now
 from resources import Collection, MemoryVerseEntry, INDENT_STRING
 
-
 os.chdir(os.path.dirname(__file__) + "/resources")
 
 
-    
 def parse_verses(dom: BeautifulSoup, depth: int=0) -> list[MemoryVerseEntry]:
     listItems = dom.find_all('div', {'class': "MemoryVerseListItem"})
 
