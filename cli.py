@@ -17,9 +17,9 @@ def userChoice() -> int:
     ))
 
 def resync():
-    import scraper
+    import resync
     print("\nRe-synchronizing local library...")
-    scraper.main()
+    resync.main()
 
 def viewStats():
     print("starting view stats")
@@ -36,4 +36,7 @@ for i, choice in enumerate(choices, 1):
     })
 
 while True:
-    switcher[userChoice()]()
+    try:
+        switcher[userChoice()]()
+    except (KeyError, ValueError):
+        print("ERROR.")
