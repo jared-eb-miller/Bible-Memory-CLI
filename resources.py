@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 class MemoryVerseEntry:
     class Address:
         def __init__(
@@ -82,3 +84,78 @@ class MemoryVerseEntry:
 
     def __str__(self) -> str:
         return f'MemoryVerseEntry object (\n\tAddress: {str(self.address)}\n\tContent: "{self.content}"\n)'
+    
+INDENT_WIDTH = 2
+INDENT_STRING = ''.join([' ']*INDENT_WIDTH)
+
+class Collection:
+    def __init__(self, name: str, parent=None):
+        self.name = name
+        self.verses: list[MemoryVerseEntry] = []
+        self.subcollections: list[Collection] = []
+        self.url_name = ''
+        self.parent = parent
+
+    def add_subcollection(self, collection: Collection) -> None:
+        self.subcollections.append(collection)
+        collection.set_parent(self)
+
+    def add_subcollections(self, collections: list[Collection]) -> None:
+        for collection in collections:
+            self.add_subcollection(collection)
+
+    def remove_subcollection(self, collection: Collection) -> None:
+        self.subcollections.remove(collection)
+
+    def set_parent(self, parent: Collection) -> None:
+        if self.parent is not None:
+            if self.parent == parent:
+                return
+            self.parent.remove_subcollection(self)
+        
+        self.parent = parent
+
+    def ancestry(self) -> str:
+        ancestors = [self]
+        generation = self
+        while generation.parent is not None:
+            generation = generation.parent
+            ancestors.append(generation)
+        
+        return '/'.join([e.name for e in ancestors[::-1]])
+    
+    def to_dict(self) -> dict:
+        verse_dict = {}
+        for verse in self.verses:
+            verse_dict.update(verse.to_dict())
+
+        collection_dict = {}
+        for collection in self.subcollections:
+            collection_dict.update(collection.to_dict())
+
+        contents = {
+            "verses": verse_dict,
+            "subcolections": collection_dict
+        }
+
+        return {self.name: contents}
+
+    def pretify(self) -> str:
+        output = self.name + ":\n"
+
+        for verse in self.verses:
+            output += "|- " + str(verse.address) + "\n"
+
+        for collection in self.subcollections:
+            output += "|- " + collection.name + ":\n"
+            
+            for verse in collection.verses:
+                output += "|   |- " + str(verse.address) + "\n"
+
+            for subcollection in collection.subcollections:
+                output += "|   |- " + subcollection.name + ":\n"
+
+                for verse in subcollection.verses:
+                    output += "|   |   |- " + str(verse.address) + "\n"
+        
+        return output
