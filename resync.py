@@ -88,11 +88,56 @@ def parse_page(driver: webdriver.Chrome,  into_collection: Collection, depth: in
         parse_page(driver, subcollection, depth=depth+1)
 
 
-def get_credentials(user: str, cred_dict: dict):
+def extract_credentials(user: str, cred_dict: dict) -> (str, str):
     email = cred_dict["users"][user]["email"]
     password = cred_dict["users"][user]["password"]
 
     return email, password
+
+def get_credentials() -> (str, str):
+    with open('credentials.json') as f:
+        credentials = json.loads(f.read())
+
+    users = list(credentials['users'].keys())
+
+    if len(users) == 1:
+        user = users[0]
+        ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
+        while True:
+            if ans == "Y":
+                return extract_credentials(user, credentials)
+                break
+            elif ans == "N":
+                break # TODO implement using a different set of credentials
+            else:
+                ans = input("ERROR. Please enter a valid input: ").upper()
+
+    elif len(users) > 1:
+        # TODO implement an option to use a new set of credentials
+        print("Please select a user.\n")
+
+        for i, user in enumerate(users):
+            print(f"{i+1}) {user}")
+
+        while True:
+            try:
+                ans = int(input("Please enter the number of the user: ", end=''))
+                return extract_credentials(users[ans], credentials)
+            except (ValueError, IndexError):
+                print("ERROR.", end=' ')
+    else:
+        pass # TODO implement the case for 0 saved users or error case
+
+def login(driver: webdriver.Chrome, email: str, password: str) -> None:
+    print("\nGET request to https://biblememory.com/login")
+    driver.get("https://biblememory.com/login")
+
+    print(f"{INDENT_STRING}Adding credentials...")
+    driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
+    driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
+    driver.find_element(By.CLASS_NAME, "btnLogin").click()
+    
+    print(f"{INDENT_STRING}Login sucessful!\n")
 
 def main():
     print("Starting selenium webdriver instance...")
@@ -105,52 +150,9 @@ def main():
         service=Service(ChromeDriverManager().install())
         )
     
-    with open('credentials.json') as f:
-        credentials = json.loads(f.read())
+    email, password = get_credentials()
+    login(driver, email, password)
 
-    users = list(credentials['users'].keys())
-    user = "DEFAULT"
-    email = "DEFAULT"
-    password = "DEFAULT"
-
-    if len(users) == 1:
-        user = users[0]
-        ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
-        while True:
-            if ans == "Y":
-                email, password = get_credentials(user, credentials)
-                break
-            elif ans == "N":
-                break # TODO implement using a different set of credentials
-            else:
-                ans = input("ERROR. Please enter a valid input: ").upper()
-    elif len(users) > 1:
-        # TODO implement an option to use a new set of credentials
-        print("Please select a user.\n")
-
-        for i, user in enumerate(users):
-            print(f"{i+1}) {user}")
-
-        while True:
-            try:
-                ans = int(input("Please enter the number of the user: ", end=''))
-                email, password = get_credentials(users[ans], credentials)
-                break
-            except (ValueError, IndexError):
-                print("ERROR.", end=' ')
-    else:
-        pass # TODO implement the case for 0 saved users or error case
-
-    # login
-    print("\nGET request to https://biblememory.com/login")
-    driver.get("https://biblememory.com/login")
-    print(f"{INDENT_STRING}Adding credentials...")
-    driver.find_element(By.ID, "txtLoginEmail").send_keys(email)
-    driver.find_element(By.ID, "txtLoginPassword").send_keys(password)
-    driver.find_element(By.CLASS_NAME, "btnLogin").click()
-    print(f"{INDENT_STRING}Login sucessful!\n")
-
-    
     myVerses = Collection('My Verses')
     parse_page(driver, myVerses)
 
