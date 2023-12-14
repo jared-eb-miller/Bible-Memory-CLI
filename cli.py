@@ -1,6 +1,6 @@
 import os
 import platform
-
+import time
 if platform.system() == "Windows":
     clear = lambda: os.system("cls")
 else:
@@ -30,7 +30,9 @@ def resync():
     resync.main()
 
 def viewStats():
-    print("starting view stats")
+    import viewStats
+    viewStats.main()
+    time.sleep(5)
 
 def reviewVerses():
     print("starting review")
@@ -43,6 +45,7 @@ for i, choice in enumerate(choices, 1):
         i: choice
     })
 
+clear()
 while True:
     try:
         switcher[userChoice()]()

@@ -30,7 +30,6 @@ class MemoryVerseEntry:
     class SingleVerse(Address):
         def __init__(self, book: int, chapter: int, verse: int):
             super().__init__(book, chapter, verse)
-            del self.isSingleVerse
 
         def __eq__(self, __value: object) -> bool:
             if isinstance(__value, type(self)): 
@@ -91,10 +90,10 @@ INDENT_STRING = ''.join([' ']*INDENT_WIDTH)
 class Collection:
     def __init__(self, name: str, parent=None):
         self.name = name
+        self.parent = parent
         self.verses: list[MemoryVerseEntry] = []
         self.subcollections: list[Collection] = []
         self.url_name = ''
-        self.parent = parent
 
     def add_subcollection(self, collection: Collection) -> None:
         self.subcollections.append(collection)
@@ -180,3 +179,44 @@ class CollectionFromDict(Collection):
                     sc_name: subcollection_dict[sc_name]
                 })
             )
+
+class UtilityCollection(Collection):
+    def __init__(self, c: Collection):
+        super().__init__(c.name, c.parent)
+        del self.url_name
+
+        self.verses = c.verses
+        self.subcollections = c.subcollections
+    
+    def get_verses(self) -> list[MemoryVerseEntry]:
+        # add child verse entries
+        verses_list = self.verses
+
+        # recursively add child collection verses
+        for sc in self.subcollections:
+            verses_list += UtilityCollection(sc).get_verses()
+
+        return verses_list
+    
+    def filter_verse_entries(self, verse_list: list[MemoryVerseEntry]) -> list[MemoryVerseEntry]:
+        filtered_verse_entries = []
+        repr_gen = lambda v_list: [str(v.address) for v in v_list]
+
+        for v in verse_list:
+            if str(v.address) not in repr_gen(filtered_verse_entries):
+                filtered_verse_entries.append(v)
+        
+        return filtered_verse_entries
+
+    
+class CollectionStats:
+    def __init__(self, c: Collection):
+        self.collection = UtilityCollection(c)
+        
+        # generate stats
+        self.verse_entries = self.collection.get_verses()
+        self.num_verse_entries = len(self.verse_entries)
+
+        self.unique_verse_entries = \
+            self.collection.filter_verse_entries(self.verse_entries)
+        self.num_unique_verse_entries = len(self.unique_verse_entries)
