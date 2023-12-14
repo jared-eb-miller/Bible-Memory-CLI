@@ -198,25 +198,53 @@ class UtilityCollection(Collection):
 
         return verses_list
     
-    def filter_verse_entries(self, verse_list: list[MemoryVerseEntry]) -> list[MemoryVerseEntry]:
+    def filter_verse_entries(self, verse_list: list[MemoryVerseEntry]
+                             ) -> list[MemoryVerseEntry]:
         filtered_verse_entries = []
-        repr_gen = lambda v_list: [str(v.address) for v in v_list]
+        repr_gen = lambda v_list: [(str(v.address), v.content) for v in v_list]
 
         for v in verse_list:
-            if str(v.address) not in repr_gen(filtered_verse_entries):
+            if (str(v.address), v.content) not in repr_gen(filtered_verse_entries):
                 filtered_verse_entries.append(v)
-        
-        return filtered_verse_entries
 
+        return filtered_verse_entries
+    
+    def expand_multi_verse_entries(self, verse_list: list[MemoryVerseEntry]
+                                   ) -> list[MemoryVerseEntry]:
+        expanded_verse_entries = []
+
+        for v in verse_list:
+            expanded_verse_entries += [
+                MemoryVerseEntry(
+                    str(_sv), 
+                    'UNKNOWN', 
+                    v.isMemorized
+                ) for _sv in v.versesContained
+            ]
+        
+        return expanded_verse_entries
     
 class CollectionStats:
     def __init__(self, c: Collection):
-        self.collection = UtilityCollection(c)
+        self.uc = UtilityCollection(c)
         
         # generate stats
-        self.verse_entries = self.collection.get_verses()
+        self.verse_entries = self.uc.get_verses()
         self.num_verse_entries = len(self.verse_entries)
 
         self.unique_verse_entries = \
-            self.collection.filter_verse_entries(self.verse_entries)
+            self.uc.filter_verse_entries(self.verse_entries)
         self.num_unique_verse_entries = len(self.unique_verse_entries)
+
+        self.component_verses = \
+            self.uc.expand_multi_verse_entries(self.unique_verse_entries)
+        self.num_component_verses = len(self.component_verses)
+
+        self.verses = self.uc.filter_verse_entries(self.component_verses)
+        self.num_verses = len(self.verses)
+
+        self.verses_memorized = list(filter(lambda x: x.isMemorized, self.verses))
+        self.num_verses_memorized = len(self.verses_memorized)
+
+        self.verses_not_memorized = list(filter(lambda x: not x.isMemorized, self.verses))
+        self.num_verses_not_memorized = len(self.verses_not_memorized)

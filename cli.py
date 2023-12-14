@@ -16,23 +16,26 @@ def displayMenu():
     4) Exit
 
 **********************************************************
-""")
+"""[1:])
+    
+def wait():
+    input("Press enter to continue...")
 
 def userChoice() -> int:
-    displayMenu()
     return int(input(
         "Enter your choice: "
     ))
 
 def resync():
+    clear()
     import resync
-    print("\nRe-synchronizing local library...")
     resync.main()
 
 def viewStats():
+    clear()
     import viewStats
     viewStats.main()
-    time.sleep(5)
+    wait()
 
 def reviewVerses():
     print("starting review")
@@ -47,9 +50,12 @@ for i, choice in enumerate(choices, 1):
 
 clear()
 while True:
-    try:
-        switcher[userChoice()]()
-        clear()
-    except (KeyError, ValueError):
-        clear()
-        print("ERROR.")
+    displayMenu()
+    everything_is_not_good_in_the_hood = True
+    while everything_is_not_good_in_the_hood:
+        try:
+            switcher[userChoice()]()
+            everything_is_not_good_in_the_hood = False
+        except (KeyError, ValueError):
+            print("ERROR.")
+    clear()

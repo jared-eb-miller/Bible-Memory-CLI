@@ -100,15 +100,17 @@ def get_credentials() -> (str, str):
 
     if len(users) == 1:
         user = users[0]
-        ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
-        while True:
-            if ans == "Y":
-                return extract_credentials(user, credentials)
-                break
-            elif ans == "N":
-                break # TODO implement using a different set of credentials
-            else:
-                ans = input("ERROR. Please enter a valid input: ").upper()
+        return extract_credentials(user, credentials)
+
+        # ans = input(f"Would you like to use the saved credentials for {user}? (Y/N) ").upper()
+        # while True:
+        #     if ans == "Y":
+        #         return extract_credentials(user, credentials)
+        #         break
+        #     elif ans == "N":
+        #         break # TODO implement using a different set of credentials
+        #     else:
+        #         ans = input("ERROR. Please enter a valid input: ").upper()
 
     elif len(users) > 1:
         # TODO implement an option to use a new set of credentials
@@ -138,6 +140,8 @@ def login(driver: webdriver.Chrome, email: str, password: str) -> None:
     print(f"{INDENT_STRING}Login sucessful!\n")
 
 def main():
+    print("************* Re-synchronizing Local Library *************")
+    print()
     print("Starting selenium webdriver instance...")
     options = Options()
     options.add_argument('--headless')
@@ -164,7 +168,6 @@ def main():
     print("\nSuccessfully parsed your entire library!")
     print("Shutting down webdriver instance...")
     driver.quit()
-    print()
 
 if __name__ == "__main__":
     main()
