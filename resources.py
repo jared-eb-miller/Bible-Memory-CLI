@@ -226,25 +226,86 @@ class UtilityCollection(Collection):
     
 class CollectionStats:
     def __init__(self, c: Collection):
+
         self.uc = UtilityCollection(c)
         
         # generate stats
-        self.verse_entries = self.uc.get_verses()
-        self.num_verse_entries = len(self.verse_entries)
+        self.verse_entries: list[MemoryVerseEntry] = self.uc.get_verses()
+        self.num_verse_entries: int = len(self.verse_entries)
 
-        self.unique_verse_entries = \
+        self.unique_verse_entries: list[MemoryVerseEntry] = \
             self.uc.filter_verse_entries(self.verse_entries)
-        self.num_unique_verse_entries = len(self.unique_verse_entries)
+        self.num_unique_verse_entries: int = len(self.unique_verse_entries)
 
-        self.component_verses = \
+        self.component_verses: list[MemoryVerseEntry] = \
             self.uc.expand_multi_verse_entries(self.unique_verse_entries)
-        self.num_component_verses = len(self.component_verses)
+        self.num_component_verses: int = len(self.component_verses)
 
-        self.verses = self.uc.filter_verse_entries(self.component_verses)
-        self.num_verses = len(self.verses)
+        self.verses: list[MemoryVerseEntry] = \
+            self.uc.filter_verse_entries(self.component_verses)
+        self.num_verses: int = len(self.verses)
 
-        self.verses_memorized = list(filter(lambda x: x.isMemorized, self.verses))
-        self.num_verses_memorized = len(self.verses_memorized)
+        self.verses_memorized: list[MemoryVerseEntry] = \
+            list(filter(lambda x: x.isMemorized, self.verses))
+        self.num_verses_memorized: int = len(self.verses_memorized)
 
-        self.verses_not_memorized = list(filter(lambda x: not x.isMemorized, self.verses))
-        self.num_verses_not_memorized = len(self.verses_not_memorized)
+        self.verses_not_memorized: list[MemoryVerseEntry] = \
+            list(filter(lambda x: not x.isMemorized, self.verses))
+        self.num_verses_not_memorized: int = len(self.verses_not_memorized)
+
+        book_strs: list[str] = list(set([v.address.book for v in self.verses]))
+        self.books: list[BookStats] = []
+        for book in book_strs:
+            self.books.append(
+                BookStats(book, self.verses)
+            )
+        
+class BookStats:
+    def __init__(self, name: str, verse_list: list[MemoryVerseEntry]):
+        self.name: str = name
+        self.chapters: list[ChapterStats] = []
+
+        self.verses: list[MemoryVerseEntry] = list(filter(lambda x: x.address.book == name, verse_list))
+        self.num_verses: int = len(self.verses)
+
+        self.verses_memorized: list[MemoryVerseEntry] = \
+            list(filter(lambda x: x.isMemorized, self.verses))
+        self.num_verses_memorized: int = len(self.verses_memorized)
+
+        self.verses_not_memorized: list[MemoryVerseEntry] = \
+            list(filter(lambda x: not x.isMemorized, self.verses))
+        self.num_verses_not_memorized: int = len(self.verses_not_memorized)
+
+        for v in self.verses:
+            if v.address.chapter not in [c.number for c in self.chapters]:
+                self.chapters.append(
+                    ChapterStats(v.address.chapter, [v])
+                )
+            else:
+                for c in self.chapters:
+                    if c.number == v.address.chapter:
+                        c.add_verse(v)
+
+        self.num_chapters: int = len(self.chapters)
+
+class ChapterStats:
+    def __init__(self, number: int, verse_list: list[MemoryVerseEntry]):
+        self.number: str = number
+
+        self.verses: list[MemoryVerseEntry] = list(filter(lambda x: x.address.chapter == number, verse_list))
+        self.update_stats()
+
+    def add_verse(self, verse: MemoryVerseEntry) -> None:
+        self.verses.append(verse)
+        self.update_stats()
+
+    def update_stats(self) -> None:
+        self.num_verses: int = len(self.verses)
+
+        self.verses_memorized: list[MemoryVerseEntry] = \
+            list(filter(lambda x: x.isMemorized, self.verses))
+        self.num_verses_memorized: int = len(self.verses_memorized)
+
+        self.verses_not_memorized: list[MemoryVerseEntry] = \
+            list(filter(lambda x: not x.isMemorized, self.verses))
+        self.num_verses_not_memorized: int = len(self.verses_not_memorized)
