@@ -1,10 +1,12 @@
 import os
 import platform
-import time
+from resources import userChoice
+
 if platform.system() == "Windows":
     clear = lambda: os.system("cls")
 else:
     clear = lambda: os.system("clear")
+
 
 def displayMenu():
     print("""
@@ -20,11 +22,6 @@ def displayMenu():
     
 def wait():
     input("Press enter to continue...")
-
-def userChoice() -> int:
-    return int(input(
-        "Enter your choice: "
-    ))
 
 def resync():
     clear()

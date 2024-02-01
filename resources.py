@@ -309,3 +309,9 @@ class ChapterStats:
         self.verses_not_memorized: list[MemoryVerseEntry] = \
             list(filter(lambda x: not x.isMemorized, self.verses))
         self.num_verses_not_memorized: int = len(self.verses_not_memorized)
+
+
+def userChoice() -> int:
+    return int(input(
+        "Enter your choice: "
+    ))

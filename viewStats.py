@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime
-from resources import CollectionFromDict, Collection, CollectionStats, INDENT_STRING
+from resources import *
 
 os.chdir(os.path.dirname(__file__) + "/resources/library-logs/")
 
@@ -22,6 +22,22 @@ def print_collection_book_breakdown(col: CollectionStats) -> None:
         for c in book.chapters:
             print(f"{INDENT_STRING*4}Chapter {c.number} - {c.num_verses_memorized}/{c.num_verses}")
 
+def displaySubcollections(col: Collection) -> None:
+    s = "**********************************************************\n\n"
+    target = print_collection_stats
+    choices = [lambda: target(CollectionStats(x)) for x in col.subcollections]
+    switcher = {}
+    for i, sc in enumerate(col.subcollections, 1):
+        s += INDENT_STRING*2 + str(i) + ") " + sc.name + "\n"
+        switcher.update({
+            i: choices[i-1]
+        })
+    s += "\n**********************************************************"
+    print(s)
+    print()
+    switcher[userChoice()]()
+    print()
+
 def main():
     # load library
     log_files = os.listdir()
@@ -38,7 +54,14 @@ def main():
     print()
     print_collection_stats(stats)
     print()
-    print_collection_book_breakdown(stats)
+    # print_collection_book_breakdown(stats)
+    # print()
+    i = input("Would you like to view your subcollections? (Y/N) ")
+    if i == 'Y':
+        print()
+        displaySubcollections(col)
+        
+
     # os.chdir(os.path.dirname(__file__) + "/resources/")
     # with open("outFile.txt", 'w') as f:
     #     f.write(col.pretify())
